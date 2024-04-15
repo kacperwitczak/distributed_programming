@@ -15,8 +15,8 @@ public class Main {
 
         int nextId = 0;
         for (int i = 0; i < n; i++) {
-            producerPool.execute(new Producer(warehouse, nextId++));
-            consumerPool.execute(new Consumer(warehouse, nextId++));
+            producerPool.submit(new Producer(warehouse, nextId++));
+            consumerPool.submit(new Consumer(warehouse, nextId++));
         }
 
         String input = "";
