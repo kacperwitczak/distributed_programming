@@ -1,11 +1,10 @@
 package org.example;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class JavaExercise2 {
+
+
     private static class CachingPrimeChecker {
         // TODO: dokończ implementację cachu
         // (ustal typ przechowywanej wartości oraz rodzaj wykorzystywanej mapy)
@@ -16,18 +15,8 @@ public class JavaExercise2 {
             // TODO: dokończ implementację sprawdzania czy liczba x jest liczbą pierwszą
             // Należy zagwarantować, że dla każdej unikalnej liczby obliczenia zostaną wykonane tylko 1 raz
             // Ponowne (w tym równoległe) sprawdzenie czy dana liczba jest liczbą pierwszą powinny wykorzystać cache
-            if (cache.containsKey(x)) {
-                System.out.println("From cache: " + x + " is " + cache.get(x));
-                return cache.get(x);
-            }
 
-            boolean result = computeIfIsPrime(x);
-
-            System.out.println("Computed: " + x + " is " + result);
-
-            cache.put(x, result);
-
-            return result;
+            return cache.computeIfAbsent(x, this::computeIfIsPrime);
         }
 
         // Funkcja sprawdzająca czy dana liczba jest liczbą pierwszą, należy jej użyć do wykonywania obliczeń
@@ -64,8 +53,8 @@ public class JavaExercise2 {
         Scanner sc = new Scanner(System.in);
         String input = "";
         boolean running = true;
-        while (running) {
-            Set<Long> toCompute = new HashSet<>();
+        while (true) {
+            List<Long> toCompute = new ArrayList<>();
             System.out.println("Enter 4 numbers, q to quit");
             for (int i = 0; i<n;i++) {
                 input = sc.nextLine();
@@ -81,17 +70,26 @@ public class JavaExercise2 {
                 }
             }
 
-            CyclicBarrier barrier = new CyclicBarrier(toCompute.size()+1); //main is waiting too;
+            if (!running) {
+                break;
+            }
+
+            CountDownLatch mainBarrier = new CountDownLatch(toCompute.size());
+            CyclicBarrier threadBarrier = new CyclicBarrier(toCompute.size());
             toCompute.forEach(x -> calculationPool.submit(() -> {
-                cachingPrimeChecker.isPrime(x);
                 try {
-                    barrier.await();
+                    threadBarrier.await();
                 } catch (InterruptedException | BrokenBarrierException ignored) {
                 }
+
+                boolean result = cachingPrimeChecker.isPrime(x);
+                System.out.println(x + " is " + (result ? "prime" : "not prime"));
+                mainBarrier.countDown();
+
             }));
             try {
-                barrier.await();
-            } catch (InterruptedException | BrokenBarrierException ignored) {
+                mainBarrier.await();
+            } catch (InterruptedException ignored) {
             }
         }
 
